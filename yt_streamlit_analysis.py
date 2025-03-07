@@ -284,6 +284,23 @@ def main():
             ).interactive()
 
             st.altair_chart(bar_chart, use_container_width=True)
+
+            # Add bar chart to display the count of videos for each brand
+            brand_count_data = data['品牌'].value_counts().reset_index()
+            brand_count_data.columns = ['品牌', '影片數']
+
+            brand_count_chart = alt.Chart(brand_count_data).mark_bar().encode(
+                x=alt.X('品牌:N', title='品牌', axis=None, sort='-y'),
+                y=alt.Y('影片數:Q', title='影片數'),
+                color=alt.Color('品牌:N', scale=color_scale,
+                                legend=alt.Legend(title="品牌", labelLimit=300)),
+                tooltip=['品牌:N', '影片數:Q']
+            ).properties(
+                width=800,
+                height=400
+            ).interactive()
+
+            st.altair_chart(brand_count_chart, use_container_width=True)
         else:
             st.write("沒有選擇任何品牌或沒有符合條件的數據。")
 
