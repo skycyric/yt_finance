@@ -4,6 +4,7 @@ import yt_dlp
 import psycopg2
 from psycopg2 import sql
 from selenium_scraper import get_video_urls_from_channel
+import yaml
 
 
 def get_video_details_from_url(url, is_playlist=True, cookies_path=None):
@@ -168,6 +169,11 @@ def main(config):
     save_videos_to_postgresql(videos, db_config, table_name)
 
 
+def load_db_config(yaml_path):
+    with open(yaml_path, 'r') as file:
+        return yaml.safe_load(file)
+
+
 if __name__ == "__main__":
     channels = {
         'tvbs_money': {
@@ -221,12 +227,8 @@ if __name__ == "__main__":
         }
     }
 
-    db_config = {
-        'host': 'localhost',
-        'dbname': 'postgres',
-        'user': 'tvbs',
-        'password': '10030805'
-    }
+    db_config_path = 'db_config.yaml'  # Path to the YAML file
+    db_config = load_db_config(db_config_path)
 
     for channel_name, config in channels.items():
         config['db_config'] = db_config
