@@ -12,3 +12,4 @@ altair
 rank-bm25
 streamlit-tags
 matplotlib
+scikit-learn
