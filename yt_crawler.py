@@ -146,6 +146,32 @@ def save_videos_to_postgresql(videos, db_config, table_name):
     conn.close()
 
 
+def test_api(url, is_playlist=True, cookies_path=None):
+    """
+    測試 API 是否能抓取完整的資料。
+
+    Args:
+        url: 播放清單或頻道的 URL
+        is_playlist: 是否為播放清單的 URL
+        cookies_path: cookies 文件的路徑
+
+    Returns:
+        bool: 如果資料完整則返回 True，否則返回 False
+    """
+    videos = get_video_details_from_url(url, is_playlist, cookies_path)
+    if not videos:
+        print("No videos found.")
+        return False
+
+    for video in videos:
+        if not all([video['video_id'], video['title'], video['href']]):
+            print(f"Incomplete data for video: {video}")
+            return False
+
+    print("API test passed. All videos have complete data.")
+    return True
+
+
 def main(config):
     url = config['url']
     output_path = config['output_path']
@@ -155,6 +181,11 @@ def main(config):
     cookies_path = config.get('cookies_path')
 
     print('url: {}'.format(url))
+
+    # 測試 API 是否能抓取完整的資料
+    if not test_api(url, is_playlist, cookies_path):
+        print("API test failed. Exiting.")
+        return
 
     # 抓取播放清單或頻道中的影片資料
     videos = get_video_details_from_url(url, is_playlist, cookies_path)
