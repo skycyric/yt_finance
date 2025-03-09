@@ -1,5 +1,4 @@
 yt-dlp
-psycopg2
 selenium
 PyYAML
 streamlit
