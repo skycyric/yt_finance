@@ -62,3 +62,6 @@ venv.bak/
 
 # Database configuration
 db_config.yaml
+
+# Subtitles folder
+Subtitles/
