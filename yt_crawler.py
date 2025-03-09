@@ -21,7 +21,7 @@ def get_video_details_from_url(url, is_playlist=True, cookies_path=None):
     """
     ydl_opts = {
         'quiet': True,
-        'extract_flat': True,
+        'extract_flat': False,  # 修改這裡以獲取詳細信息
         'force_generic_extractor': True,
         'retries': 20,  # 增加重試次數
         'sleep_interval': 10,  # 增加延遲時間
@@ -94,9 +94,17 @@ def save_videos_to_json(videos, output_path):
 
     for video in videos:
         video_id = video['video_id']
+        if not video_id:
+            print(f"Skipping video with no ID: {video}")
+            continue
+        # Sanitize video_id to ensure it's a valid filename
+        video_id = "".join([c if c.isalnum() else "_" for c in video_id])
         entity_fname = os.path.join(output_path, f"{video_id}.json")
-        with open(entity_fname, "w", encoding='utf-8') as f:
-            json.dump(video, f, ensure_ascii=False, indent=4)
+        try:
+            with open(entity_fname, "w", encoding='utf-8') as f:
+                json.dump(video, f, ensure_ascii=False, indent=4)
+        except OSError as e:
+            print(f"Error writing file {entity_fname}: {e}")
 
 
 def save_videos_to_postgresql(videos, db_config, table_name):
