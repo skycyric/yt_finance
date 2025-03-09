@@ -6,3 +6,8 @@ pandas
 requests
 psycopg2-binary
 SQLAlchemy
+transformers
+scipy
+altair
+rank-bm25
+streamlit-tags
