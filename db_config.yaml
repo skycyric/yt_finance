@@ -1,5 +1,28 @@
-host: "0.tcp.jp.ngrok.io"
-port: 18174
-dbname: "postgres"
-user: "tvbs"
-password: "tvbs123"
+database:
+  host: "ytfinance.duckdns.org"
+  port: 18174
+  dbname: "postgres"
+  user: "tvbs"
+  password: "tvbs123"
+  whitelist_ips:
+    - "35.230.127.150"
+    - "35.203.151.101"
+    - "34.19.100.134"
+    - "34.83.176.217"
+    - "35.230.58.211"
+    - "35.203.187.165"
+    - "35.185.209.55"
+    - "34.127.88.74"
+    - "34.127.0.121"
+    - "35.230.78.192"
+    - "35.247.110.67"
+    - "35.197.92.111"
+    - "34.168.247.159"
+    - "35.230.56.30"
+    - "34.127.33.101"
+    - "35.227.190.87"
+    - "35.199.156.97"
+    - "34.82.135.155"
+  duckdns:
+    domain: "ytfinance.duckdns.org"
+    update_url: "https://www.duckdns.org/update?domains=ytfinance&token=2152979f-c4c9-4d44-93fe-c6453771064b&ip="
