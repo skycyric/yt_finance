@@ -252,8 +252,8 @@ if __name__ == "__main__":
         },
         'ebcmoneyshow': {
             'url': 'https://www.youtube.com/@EBCmoneyshow',
-            'output_path': './Subtitles/eBcmoneyshow',
-            'table_name': 'eBcmoneyshow_channel',
+            'output_path': './Subtitles/ebcmoneyshow',
+            'table_name': 'ebcmoneyshow_channel',
             'is_playlist': False,
             'cookies_path': './cookies.txt'
         },
