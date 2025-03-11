@@ -108,12 +108,19 @@ def fetch_earliest_upload_date(engine):
     query = """
     SELECT MIN(upload_date) AS earliest_date
     FROM (
-        SELECT upload_date FROM yt_data.daisyhiu_channel
+        SELECT upload_date FROM yt_data.cmoney_etf_playlist
         UNION ALL
         SELECT upload_date FROM yt_data.ebcmoneyshow_channel
         UNION ALL
-        SELECT upload_date FROM yt_data.finance_frontline_channel
-        -- Add more tables here if needed
+        SELECT upload_date FROM yt_data.tvbs_money_playlist
+        UNION ALL
+        SELECT upload_date FROM yt_data.tvbs_money_essence_playlist
+        UNION ALL
+        SELECT upload_date FROM yt_data.shin_li_hall_of_fame_playlist
+        UNION ALL
+        SELECT upload_date FROM yt_data.zrbros_playlist
+        UNION ALL
+        SELECT upload_date FROM yt_data.cts_featured_channel
     ) AS all_upload_dates;
     """
     result = pd.read_sql(query, engine)
