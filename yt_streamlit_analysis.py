@@ -19,42 +19,18 @@ st.set_page_config(layout="wide")
 
 
 def load_config():
-    with open("config.yaml", "r") as file:
+    with open("db_config.yaml", "r") as file:
         return yaml.safe_load(file)
 
 
 config = load_config()
 
-DB_USER = config["user"]
-DB_PASSWORD = config["password"]
-DB_NAME = config["dbname"]
+DB_USER = config["database"]["user"]
+DB_PASSWORD = config["database"]["password"]
+DB_NAME = config["database"]["dbname"]
+DB_HOST = config["database"]["host"]
+DB_PORT = config["database"]["port"]
 
-# **自動偵測 ngrok 端口**
-
-
-def get_ngrok_postgres_url():
-    try:
-        response = requests.get(
-            "http://127.0.0.1:4040/api/tunnels")  # 取得 ngrok 轉發的資訊
-        data = response.json()
-
-        # 找到 TCP 轉發的 PostgreSQL 連線
-        for tunnel in data.get("tunnels", []):
-            if tunnel["proto"] == "tcp":
-                # 例如 "tcp://0.tcp.jp.ngrok.io:15259"
-                public_url = tunnel["public_url"]
-                # 取得 "0.tcp.jp.ngrok.io"
-                host = public_url.split("//")[1].split(":")[0]
-                port = public_url.split(":")[2]  # 取得 "15259"
-                return host, port
-
-    except requests.exceptions.RequestException:
-        st.warning("⚠️ 無法獲取 ngrok 連線資訊，將使用本機 `localhost:5432`")
-
-    return "localhost", "5432"  # 若 ngrok 失敗，使用本機 PostgreSQL
-
-
-DB_HOST, DB_PORT = get_ngrok_postgres_url()
 # Database connection function
 
 
@@ -65,7 +41,7 @@ def connect_to_db():
                                'connect_timeout': 10})
         return engine
     except Exception as e:
-        st.error("❌ 無法連接到 PostgreSQL，請檢查 ngrok 是否正在運行")
+        st.error("❌ 無法連接到 PostgreSQL，請檢查連線設定")
         st.error(str(e))
         return None
 
