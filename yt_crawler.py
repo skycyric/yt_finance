@@ -5,6 +5,8 @@ import psycopg2
 from psycopg2 import sql
 from selenium_scraper import get_video_urls_from_channel
 import yaml
+import socket
+from sqlalchemy import create_engine
 
 
 def get_video_details_from_url(url, is_playlist=True, cookies_path=None):
@@ -107,6 +109,50 @@ def save_videos_to_json(videos, output_path):
             print(f"Error writing file {entity_fname}: {e}")
 
 
+def is_postgresql_running(host, port):
+    """
+    檢查 PostgreSQL 伺服器是否正在運行。
+
+    Args:
+        host: 伺服器主機名
+        port: 伺服器端口
+
+    Returns:
+        bool: 如果伺服器正在運行則返回 True，否則返回 False
+    """
+    try:
+        with socket.create_connection((host, port), timeout=1):
+            return True
+    except OSError:
+        return False
+
+
+def load_config():
+    with open("db_config.yaml", "r") as file:
+        return yaml.safe_load(file)
+
+
+config = load_config()
+
+DB_USER = config["database"]["user"]
+DB_PASSWORD = config["database"]["password"]
+DB_NAME = config["database"]["dbname"]
+DB_HOST = config["database"]["host"]
+DB_PORT = config["database"]["port"]
+
+
+def connect_to_db():
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    try:
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={
+                               'connect_timeout': 10})
+        return engine
+    except Exception as e:
+        print("❌ 無法連接到 PostgreSQL，請檢查連線設定")
+        print(str(e))
+        return None
+
+
 def save_videos_to_postgresql(videos, db_config, table_name):
     """
     將影片資料儲存到 PostgreSQL 資料庫中。
@@ -116,42 +162,43 @@ def save_videos_to_postgresql(videos, db_config, table_name):
         db_config: 資料庫配置字典，包含 host, dbname, user, password
         table_name: 要插入資料的表名
     """
-    conn = psycopg2.connect(**db_config)
-    cur = conn.cursor()
+    engine = connect_to_db()
+    if engine is None:
+        return
 
-    # 建立 schema 和 table
-    cur.execute(sql.SQL("""
-        CREATE SCHEMA IF NOT EXISTS yt_data;
-        CREATE TABLE IF NOT EXISTS yt_data.{} (
-            video_id TEXT PRIMARY KEY,
-            title TEXT,
-            href TEXT,
-            tags TEXT[],
-            description TEXT,
-            views INTEGER,
-            upload_date DATE
-        );
-    """).format(sql.Identifier(table_name)))
-    conn.commit()
+    try:
+        with engine.connect() as conn:
+            # 建立 schema 和 table
+            conn.execute(sql.SQL("""
+                CREATE SCHEMA IF NOT EXISTS yt_data;
+                CREATE TABLE IF NOT EXISTS yt_data.{} (
+                    video_id TEXT PRIMARY KEY,
+                    title TEXT,
+                    href TEXT,
+                    tags TEXT[],
+                    description TEXT,
+                    views INTEGER,
+                    upload_date DATE
+                );
+            """).format(sql.Identifier(table_name)))
 
-    # 插入資料
-    for video in videos:
-        cur.execute(sql.SQL("""
-            INSERT INTO yt_data.{} (video_id, title, href, tags, description, views, upload_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (video_id) DO NOTHING;
-        """).format(sql.Identifier(table_name)), (
-            video['video_id'],
-            video['title'],
-            video['href'],
-            video['tags'],
-            video['description'],
-            video['views'],
-            video['upload_date']
-        ))
-    conn.commit()
-    cur.close()
-    conn.close()
+            # 插入資料
+            for video in videos:
+                conn.execute(sql.SQL("""
+                    INSERT INTO yt_data.{} (video_id, title, href, tags, description, views, upload_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (video_id) DO NOTHING;
+                """).format(sql.Identifier(table_name)), (
+                    video['video_id'],
+                    video['title'],
+                    video['href'],
+                    video['tags'],
+                    video['description'],
+                    video['views'],
+                    video['upload_date']
+                ))
+    except Exception as e:
+        print(f"Unexpected error: {e}")
 
 
 def test_api(url, is_playlist=True, cookies_path=None):
