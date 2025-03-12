@@ -23,66 +23,49 @@ def get_video_details_from_url(url, is_playlist=True, cookies_path=None):
     """
     ydl_opts = {
         'quiet': True,
-        'extract_flat': False,  # 修改這裡以獲取詳細信息
+        'extract_flat': True,  # 先獲取影片清單
         'force_generic_extractor': True,
-        'retries': 20,  # 增加重試次數
-        'sleep_interval': 10,  # 增加延遲時間
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'retries': 20,
+        'sleep_interval': 10,
+        'user_agent': 'Mozilla/5.0'
     }
 
     if cookies_path:
         ydl_opts['cookies'] = cookies_path
 
     if not is_playlist:
-        video_urls = get_video_urls_from_channel(url)
-        entries = [{'url': video_url} for video_url in video_urls]
-    else:
+        if not url.rstrip("/").endswith("videos"):
+            url = url.rstrip("/") + "/videos"
+
+    try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            try:
-                info = ydl.extract_info(url, download=False)
-                entries = info.get('entries', [])
-            except yt_dlp.utils.DownloadError as e:
-                print(f"Error downloading {url}: {e}")
-                return []
+            info = ydl.extract_info(url, download=False)
+            entries = info.get('entries', [])
+    except yt_dlp.utils.DownloadError as e:
+        print(f"Error extracting info {url}: {e}")
+        return []
 
     videos = []
-
-    def init_video():
-        return {
-            'video_id': '',
-            'title': '',
-            'href': '',
-            'tags': [],
-            'description': '',
-            'views': '',
-            'upload_date': ''
-        }
-
     for entry in entries:
         video_url = entry.get('url')
         if not video_url:
-            print(f"Skipping entry with no URL: {entry}")
             continue
-
-        video = init_video()
 
         try:
             with yt_dlp.YoutubeDL({'quiet': True, 'cookies': cookies_path}) as ydl:
                 video_info = ydl.extract_info(video_url, download=False)
 
-            video['video_id'] = video_info['id']
-            video['title'] = video_info['title']
-            video['href'] = video_url
-            video['tags'] = video_info.get('tags', [])
-            video['description'] = video_info.get('description', '')
-            video['views'] = video_info.get('view_count', 0)
-            video['upload_date'] = video_info.get('upload_date', '')
-
-            videos.append(video)
-        except yt_dlp.utils.DownloadError as e:
-            print(f"Error downloading video {video_url}: {e}")
+            videos.append({
+                'video_id': video_info.get('id', ''),
+                'title': video_info.get('title', ''),
+                'href': video_info.get('webpage_url', video_url),
+                'tags': video_info.get('tags', []),
+                'description': video_info.get('description', ''),
+                'views': video_info.get('view_count', 0),
+                'upload_date': video_info.get('upload_date', '')
+            })
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            print(f"Error processing video {video_url}: {e}")
 
     return videos
 
