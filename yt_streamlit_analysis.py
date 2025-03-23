@@ -251,6 +251,7 @@ def main():
                 unsafe_allow_html=True)
 
     st.subheader('影片發布的觀看數-上傳日期序列圖')
+    st.write(f"目前日期區間：{date_range[0].date()} 至 {date_range[1].date()}")
     combined_chart = plot_combined_time_series(
         engine, selected_tables, table_name_map, date_range)
 
@@ -325,6 +326,7 @@ def main():
             st.markdown("<hr style='height:3px;border-width:0;color:gray;background-color:white'>",
                         unsafe_allow_html=True)
             st.subheader('影片資料總覽')
+            st.write(f"目前日期區間：{date_range[0].date()} 至 {date_range[1].date()}")
             # Display only year, month, and day
             data['上傳日期'] = data['上傳日期'].dt.date
             st.write(data)
