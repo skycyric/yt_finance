@@ -255,6 +255,16 @@ def main():
         engine, selected_tables, table_name_map, date_range)
     if combined_chart:
         st.altair_chart(combined_chart, use_container_width=True)
+
+        # Add a summary table for video count and total views per channel
+        st.markdown("<hr style='height:3px;border-width:0;color:gray;background-color:white'>",
+                    unsafe_allow_html=True)
+        st.subheader('頻道影片數與觀看數統計')
+        summary_data = data.groupby('頻道').agg(
+            影片數=('標題', 'count'),
+            總觀看數=('觀看數', 'sum')
+        ).reset_index()
+        st.write(summary_data)
     else:
         st.write("請選擇至少一個頻道來顯示日期序列圖。")
 
