@@ -15,7 +15,12 @@ import requests
 import yaml
 
 # Set the page layout to wide
-st.set_page_config(layout="wide")
+st.set_page_config(
+    layout="wide",
+    page_title="YT財經類頻道與影片資料分析",
+    theme={"primaryColor": "#1E1E1E", "backgroundColor": "#0E1117",
+           "secondaryBackgroundColor": "#262626", "textColor": "#FFFFFF"}
+)
 
 
 def load_config():
