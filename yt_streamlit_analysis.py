@@ -92,7 +92,7 @@ def fetch_video_data(engine, table_name):
     SELECT
         TO_CHAR(upload_date, 'YYYY-MM-DD') AS 上傳日期,
         views AS 觀看數,
-        '{table_name_map.get(table_name, table_name)}' AS 品牌,
+        '{table_name_map.get(table_name, table_name)}' AS 頻道,
         title AS 標題,
         tags AS 標籤,
         description AS 描述,
@@ -209,7 +209,7 @@ def plot_combined_time_series(engine, selected_tables, table_name_map, date_rang
 
 
 def main():
-    st.title('影片資料分析')
+    st.title('YT財經類頻道與影片資料分析')
 
     engine = connect_to_db()
     table_names = fetch_table_names(engine)
@@ -217,9 +217,9 @@ def main():
     table_names_display = [table_name_map.get(
         name.lower(), name) for name in table_names if name in table_name_map]
 
-    st.sidebar.title('選擇品牌')
+    st.sidebar.title('選擇頻道')
     selected_tables_display = st.sidebar.multiselect(
-        '選擇品牌', table_names_display, default=table_names_display, label_visibility='collapsed')
+        '選擇頻道', table_names_display, default=table_names_display, label_visibility='collapsed')
 
     selected_tables = [list(table_name_map.keys())[list(
         table_name_map.values()).index(name)] for name in selected_tables_display]
@@ -253,7 +253,7 @@ def main():
     if combined_chart:
         st.altair_chart(combined_chart, use_container_width=True)
     else:
-        st.write("請選擇至少一個品牌來顯示日期序列圖。")
+        st.write("請選擇至少一個頻道來顯示日期序列圖。")
 
     st.markdown("<hr style='height:3px;border-width:0;color:gray;background-color:white'>",
                 unsafe_allow_html=True)
@@ -304,9 +304,9 @@ def main():
                 # Change axis title and remove labels
                 x=alt.X('標題:N', title='影片', axis=None, sort='-y'),
                 y=alt.Y('觀看數:Q', title='觀看數'),
-                color=alt.Color('品牌:N', scale=color_scale,
-                                legend=alt.Legend(title="品牌", labelLimit=300)),
-                tooltip=['標題:N', '觀看數:Q', '品牌:N']
+                color=alt.Color('頻道:N', scale=color_scale,
+                                legend=alt.Legend(title="頻道", labelLimit=300)),
+                tooltip=['標題:N', '觀看數:Q', '頻道:N']
             ).properties(
                 width=800,
                 height=400
@@ -315,15 +315,15 @@ def main():
             st.altair_chart(bar_chart, use_container_width=True)
 
             # Add bar chart to display the count of videos for each brand
-            brand_count_data = data['品牌'].value_counts().reset_index()
-            brand_count_data.columns = ['品牌', '影片數']
+            brand_count_data = data['頻道'].value_counts().reset_index()
+            brand_count_data.columns = ['頻道', '影片數']
 
             brand_count_chart = alt.Chart(brand_count_data).mark_bar().encode(
-                x=alt.X('品牌:N', title='品牌', axis=None, sort='-y'),
+                x=alt.X('頻道:N', title='頻道', axis=None, sort='-y'),
                 y=alt.Y('影片數:Q', title='影片數'),
-                color=alt.Color('品牌:N', scale=color_scale,
-                                legend=alt.Legend(title="品牌", labelLimit=300)),
-                tooltip=['品牌:N', '影片數:Q']
+                color=alt.Color('頻道:N', scale=color_scale,
+                                legend=alt.Legend(title="頻道", labelLimit=300)),
+                tooltip=['頻道:N', '影片數:Q']
             ).properties(
                 width=800,
                 height=400
@@ -331,7 +331,7 @@ def main():
 
             st.altair_chart(brand_count_chart, use_container_width=True)
         else:
-            st.write("沒有選擇任何品牌或沒有符合條件的數據。")
+            st.write("沒有選擇任何頻道或沒有符合條件的數據。")
 
     except ValueError as e:
         st.error(e)
