@@ -202,32 +202,6 @@ def save_videos_to_postgresql(videos, db_config, table_name):
     conn.close()
 
 
-def test_api(url, is_playlist=True, cookies_path=None):
-    """
-    測試 API 是否能抓取完整的資料。
-
-    Args:
-        url: 播放清單或頻道的 URL
-        is_playlist: 是否為播放清單的 URL
-        cookies_path: cookies 文件的路徑
-
-    Returns:
-        bool: 如果資料完整則返回 True，否則返回 False
-    """
-    videos = get_video_details_from_url(url, is_playlist, cookies_path)
-    if not videos:
-        print("No videos found.")
-        return False
-
-    for video in videos:
-        if not all([video['video_id'], video['title'], video['href']]):
-            print(f"Incomplete data for video: {video}")
-            return False
-
-    print("API test passed. All videos have complete data.")
-    return True
-
-
 def main(config):
     url = config['url']
     output_path = config['output_path']
@@ -251,9 +225,17 @@ def main(config):
     save_videos_to_postgresql(videos, db_config, table_name)
 
 
-def load_db_config(yaml_path):
-    with open(yaml_path, 'r') as file:
-        return yaml.safe_load(file)
+def load_db_config(config_path):
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
+    db_config = config['database']
+    return {
+        'host': db_config['host'],
+        'port': db_config['port'],
+        'dbname': db_config['dbname'],
+        'user': db_config['user'],
+        'password': db_config['password']
+    }
 
 
 if __name__ == "__main__":
