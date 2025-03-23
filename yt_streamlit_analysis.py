@@ -253,6 +253,13 @@ def main():
     st.subheader('影片發布的觀看數-上傳日期序列圖')
     combined_chart = plot_combined_time_series(
         engine, selected_tables, table_name_map, date_range)
+
+    # Initialize and populate `data` for use in the summary table
+    data = pd.DataFrame()
+    for table in selected_tables:
+        table_data = fetch_video_data(engine, table)
+        data = pd.concat([data, table_data])
+
     if combined_chart:
         st.altair_chart(combined_chart, use_container_width=True)
 
@@ -260,11 +267,17 @@ def main():
         st.markdown("<hr style='height:3px;border-width:0;color:gray;background-color:white'>",
                     unsafe_allow_html=True)
         st.subheader('頻道影片數與觀看數統計')
-        summary_data = data.groupby('頻道').agg(
-            影片數=('標題', 'count'),
-            總觀看數=('觀看數', 'sum')
-        ).reset_index()
-        st.write(summary_data)
+        if not data.empty:
+            data['上傳日期'] = pd.to_datetime(data['上傳日期'])
+            data = data[(data['上傳日期'] >= date_range[0]) &
+                        (data['上傳日期'] <= date_range[1])]
+            summary_data = data.groupby('頻道').agg(
+                影片數=('標題', 'count'),
+                總觀看數=('觀看數', 'sum')
+            ).reset_index()
+            st.write(summary_data)
+        else:
+            st.write("沒有符合條件的數據。")
     else:
         st.write("請選擇至少一個頻道來顯示日期序列圖。")
 
