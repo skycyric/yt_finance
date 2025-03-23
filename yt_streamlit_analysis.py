@@ -226,14 +226,14 @@ def main():
 
     min_date = fetch_earliest_upload_date(engine)
     max_date = datetime.today().date()
-    default_start_date = max_date - pd.Timedelta(days=30)
+    default_start_date = max_date - pd.Timedelta(days=14)
 
     st.sidebar.markdown("<hr style='height:3px;border-width:0;color:gray;background-color:white'>",
                         unsafe_allow_html=True)
 
     # Add date input widgets in the same row
     st.sidebar.title('選擇資料日期範圍')
-    st.sidebar.write('(預設顯示最近 30 天的資料)')
+    st.sidebar.write('(預設顯示最近 14 天的資料)')
     col1, col2 = st.columns(2)
     with col1:
         start_date = st.sidebar.date_input(
