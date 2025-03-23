@@ -273,71 +273,77 @@ def main():
     )
     search_logic = st.radio('多重文字的搜尋邏輯', ['AND', 'OR'])
 
-    try:
-        data = pd.DataFrame()
-        for table in selected_tables:
-            table_data = fetch_video_data(engine, table)
-            data = pd.concat([data, table_data])
+    # Add a search button
+    if st.button('開始搜尋'):
+        try:
+            data = pd.DataFrame()
+            for table in selected_tables:
+                table_data = fetch_video_data(engine, table)
+                data = pd.concat([data, table_data])
 
-        if not data.empty:
-            data['上傳日期'] = pd.to_datetime(data['上傳日期'])
-            data = data[(data['上傳日期'] >= date_range[0]) &
-                        (data['上傳日期'] <= date_range[1])]
-            data = data.sort_values(by='觀看數', ascending=False)  # Sort by views
+            if not data.empty:
+                data['上傳日期'] = pd.to_datetime(data['上傳日期'])
+                data = data[(data['上傳日期'] >= date_range[0]) &
+                            (data['上傳日期'] <= date_range[1])]
+                data = data.sort_values(
+                    by='觀看數', ascending=False)  # Sort by views
 
-            # Apply search filter
-            if search_texts and search_columns:
-                column_filter = data[search_columns].apply(lambda x: x.str.contains(
-                    '|'.join(search_texts), case=False, na=False)).any(axis=1)
-                if search_logic == 'AND':
-                    for search_text in search_texts:
-                        column_filter &= data[search_columns].apply(lambda x: x.str.contains(
-                            search_text, case=False, na=False)).any(axis=1)
-                data = data[column_filter]
+                # Apply search filter
+                if search_texts and search_columns:
+                    column_filter = data[search_columns].apply(lambda x: x.str.contains(
+                        '|'.join(search_texts), case=False, na=False)).any(axis=1)
+                    if search_logic == 'AND':
+                        for search_text in search_texts:
+                            column_filter &= data[search_columns].apply(lambda x: x.str.contains(
+                                search_text, case=False, na=False)).any(axis=1)
+                    data = data[column_filter]
 
-            st.subheader('影片資料總覽')
-            # Display only year, month, and day
-            data['上傳日期'] = data['上傳日期'].dt.date
-            st.write(data)
+                st.markdown("<hr style='height:3px;border-width:0;color:gray;background-color:white'>",
+                            unsafe_allow_html=True)
 
-            # Add bar chart to display current table content
-            color_scale = alt.Scale(domain=list(
-                fixed_color_map.keys()), range=list(fixed_color_map.values()))
-            bar_chart = alt.Chart(data).mark_bar().encode(
-                # Change axis title and remove labels
-                x=alt.X('標題:N', title='影片', axis=None, sort='-y'),
-                y=alt.Y('觀看數:Q', title='觀看數'),
-                color=alt.Color('頻道:N', scale=color_scale,
-                                legend=alt.Legend(title="頻道", labelLimit=300)),
-                tooltip=['標題:N', '觀看數:Q', '頻道:N']
-            ).properties(
-                width=800,
-                height=400
-            ).interactive()
+                st.subheader('影片資料總覽')
+                # Display only year, month, and day
+                data['上傳日期'] = data['上傳日期'].dt.date
+                st.write(data)
 
-            st.altair_chart(bar_chart, use_container_width=True)
+                # Add bar chart to display current table content
+                color_scale = alt.Scale(domain=list(
+                    fixed_color_map.keys()), range=list(fixed_color_map.values()))
+                bar_chart = alt.Chart(data).mark_bar().encode(
+                    # Change axis title and remove labels
+                    x=alt.X('標題:N', title='影片', axis=None, sort='-y'),
+                    y=alt.Y('觀看數:Q', title='觀看數'),
+                    color=alt.Color('頻道:N', scale=color_scale,
+                                    legend=alt.Legend(title="頻道", labelLimit=300)),
+                    tooltip=['標題:N', '觀看數:Q', '頻道:N']
+                ).properties(
+                    width=800,
+                    height=400
+                ).interactive()
 
-            # Add bar chart to display the count of videos for each brand
-            brand_count_data = data['頻道'].value_counts().reset_index()
-            brand_count_data.columns = ['頻道', '影片數']
+                st.altair_chart(bar_chart, use_container_width=True)
 
-            brand_count_chart = alt.Chart(brand_count_data).mark_bar().encode(
-                x=alt.X('頻道:N', title='頻道', axis=None, sort='-y'),
-                y=alt.Y('影片數:Q', title='影片數'),
-                color=alt.Color('頻道:N', scale=color_scale,
-                                legend=alt.Legend(title="頻道", labelLimit=300)),
-                tooltip=['頻道:N', '影片數:Q']
-            ).properties(
-                width=800,
-                height=400
-            ).interactive()
+                # Add bar chart to display the count of videos for each brand
+                brand_count_data = data['頻道'].value_counts().reset_index()
+                brand_count_data.columns = ['頻道', '影片數']
 
-            st.altair_chart(brand_count_chart, use_container_width=True)
-        else:
-            st.write("沒有選擇任何頻道或沒有符合條件的數據。")
+                brand_count_chart = alt.Chart(brand_count_data).mark_bar().encode(
+                    x=alt.X('頻道:N', title='頻道', axis=None, sort='-y'),
+                    y=alt.Y('影片數:Q', title='影片數'),
+                    color=alt.Color('頻道:N', scale=color_scale,
+                                    legend=alt.Legend(title="頻道", labelLimit=300)),
+                    tooltip=['頻道:N', '影片數:Q']
+                ).properties(
+                    width=800,
+                    height=400
+                ).interactive()
 
-    except ValueError as e:
-        st.error(e)
+                st.altair_chart(brand_count_chart, use_container_width=True)
+            else:
+                st.write("沒有選擇任何頻道或沒有符合條件的數據。")
+
+        except ValueError as e:
+            st.error(e)
 
 
 if __name__ == '__main__':
