@@ -4,6 +4,92 @@ import yt_dlp
 import psycopg2
 from psycopg2 import sql
 from selenium_scraper import get_video_urls_from_channel
+import yaml
+import socket
+from sqlalchemy import create_engine
+from yt_dlp import YoutubeDL
+
+
+def get_channel_details(channel_url, cookies_path=None):
+    """
+    從頻道抓取頻道層級的數據。
+
+    Args:
+        channel_url: 頻道的 URL
+        cookies_path: cookies 文件的路徑
+
+    Returns:
+        channel_data: 包含頻道層級數據的字典
+    """
+    ydl_opts = {
+        'quiet': True,
+        'extract_flat': True,  # 只抓取頻道層級數據
+        'retries': 20,
+        'sleep_interval': 10,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    if cookies_path:
+        ydl_opts['cookies'] = cookies_path
+
+    with YoutubeDL(ydl_opts) as ydl:
+        try:
+            info = ydl.extract_info(channel_url, download=False)
+            channel_data = {
+                'channel_id': info.get('channel_id'),
+                'channel_name': info.get('channel'),
+                'channel_url': info.get('channel_url'),
+                'channel_follower_count': info.get('channel_follower_count'),
+                'channel_description': info.get('description'),
+                'channel_uploads': len(info.get('entries', []))  # 影片數量
+            }
+            return channel_data
+        except Exception as e:
+            print(f"Error extracting channel details: {e}")
+            return None
+
+
+def save_channel_to_postgresql(channel_data, db_config):
+    """
+    將頻道數據儲存到 PostgreSQL 資料庫中。
+
+    Args:
+        channel_data: 包含頻道層級數據的字典
+        db_config: 資料庫配置字典，包含 host, dbname, user, password
+    """
+    conn = psycopg2.connect(**db_config)
+    cur = conn.cursor()
+
+    # 建立 schema 和 table
+    cur.execute("""
+        CREATE SCHEMA IF NOT EXISTS yt_data;
+        CREATE TABLE IF NOT EXISTS yt_data.channels (
+            channel_id TEXT PRIMARY KEY,
+            channel_name TEXT,
+            channel_url TEXT,
+            channel_follower_count INTEGER,
+            channel_description TEXT,
+            channel_uploads INTEGER
+        );
+    """)
+    conn.commit()
+
+    # 插入資料
+    cur.execute("""
+        INSERT INTO yt_data.channels (channel_id, channel_name, channel_url, channel_follower_count, channel_description, channel_uploads)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (channel_id) DO NOTHING;
+    """, (
+        channel_data['channel_id'],
+        channel_data['channel_name'],
+        channel_data['channel_url'],
+        channel_data['channel_follower_count'],
+        channel_data['channel_description'],
+        channel_data['channel_uploads']
+    ))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 def get_video_details_from_url(url, is_playlist=True, cookies_path=None):
@@ -102,6 +188,56 @@ def save_videos_to_json(videos, output_path):
             print(f"Error writing to file {entity_fname}: {e}")
 
 
+def is_postgresql_running(host, port):
+    """
+    檢查 PostgreSQL 伺服器是否正在運行。
+
+    Args:
+        host: 伺服器主機名
+        port: 伺服器端口
+
+    Returns:
+        bool: 如果伺服器正在運行則返回 True，否則返回 False
+    """
+    try:
+        with socket.create_connection((host, port), timeout=1):
+            return True
+    except OSError:
+        return False
+
+
+def load_config():
+    with open("db_config.yaml", "r") as file:
+        return yaml.safe_load(file)
+
+
+config = load_config()
+
+DB_USER = config["database"]["user"]
+DB_PASSWORD = config["database"]["password"]
+DB_NAME = config["database"]["dbname"]
+DB_HOST = config["database"]["host"]
+DB_PORT = config["database"]["port"]
+
+
+def connect_to_db():
+    # 使用本地資料庫連接
+    LOCAL_DB_HOST = 'localhost'
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{LOCAL_DB_HOST}:{DB_PORT}/{DB_NAME}"
+    try:
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={
+                               'connect_timeout': 10})
+        return engine
+    except psycopg2.OperationalError as e:
+        print("❌ 無法連接到 PostgreSQL，請檢查連線設定")
+        print(f"OperationalError: {e}")
+        return None
+    except Exception as e:
+        print("❌ 無法連接到 PostgreSQL，請檢查連線設定")
+        print(str(e))
+        return None
+
+
 def save_videos_to_postgresql(videos, db_config, table_name):
     """
     將影片資料儲存到 PostgreSQL 資料庫中。
@@ -172,6 +308,19 @@ def main(config):
     save_videos_to_postgresql(videos, db_config, table_name)
 
 
+def load_db_config(config_path):
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
+    db_config = config['database']
+    return {
+        'host': db_config['host'],
+        'port': db_config['port'],
+        'dbname': db_config['dbname'],
+        'user': db_config['user'],
+        'password': db_config['password']
+    }
+
+
 if __name__ == "__main__":
     channels = {
         'tvbs_money': {
@@ -211,8 +360,8 @@ if __name__ == "__main__":
         },
         'ebcmoneyshow': {
             'url': 'https://www.youtube.com/@EBCmoneyshow',
-            'output_path': './Subtitles/eBcmoneyshow',
-            'table_name': 'eBcmoneyshow_channel',
+            'output_path': './Subtitles/ebcmoneyshow',
+            'table_name': 'ebcmoneyshow_channel',
             'is_playlist': False,
             'cookies_path': './cookies.txt'
         },
@@ -225,13 +374,8 @@ if __name__ == "__main__":
         }
     }
 
-    db_config = {
-        'host': 'ytfinance.duckdns.org',
-        'port': 18174,
-        'dbname': 'postgres',
-        'user': 'tvbs',
-        'password': 'tvbs123'
-    }
+    db_config_path = 'db_config.yaml'  # Path to the YAML file
+    db_config = load_db_config(db_config_path)
 
     for channel_name, config in channels.items():
         config['db_config'] = db_config
