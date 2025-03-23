@@ -275,6 +275,11 @@ def main():
                 影片數=('標題', 'count'),
                 總觀看數=('觀看數', 'sum')
             ).reset_index()
+            summary_data = summary_data.sort_values(
+                by='總觀看數', ascending=False)  # Sort by total views
+
+            # Display the date range dynamically
+            st.write(f"目前日期區間：{date_range[0].date()} 至 {date_range[1].date()}")
             st.write(summary_data)
         else:
             st.write("沒有符合條件的數據。")
