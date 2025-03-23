@@ -4,9 +4,6 @@ import yt_dlp
 import psycopg2
 from psycopg2 import sql
 from selenium_scraper import get_video_urls_from_channel
-import yaml
-import socket
-from sqlalchemy import create_engine
 
 
 def get_video_details_from_url(url, is_playlist=True, cookies_path=None):
@@ -105,56 +102,6 @@ def save_videos_to_json(videos, output_path):
             print(f"Error writing to file {entity_fname}: {e}")
 
 
-def is_postgresql_running(host, port):
-    """
-    檢查 PostgreSQL 伺服器是否正在運行。
-
-    Args:
-        host: 伺服器主機名
-        port: 伺服器端口
-
-    Returns:
-        bool: 如果伺服器正在運行則返回 True，否則返回 False
-    """
-    try:
-        with socket.create_connection((host, port), timeout=1):
-            return True
-    except OSError:
-        return False
-
-
-def load_config():
-    with open("db_config.yaml", "r") as file:
-        return yaml.safe_load(file)
-
-
-config = load_config()
-
-DB_USER = config["database"]["user"]
-DB_PASSWORD = config["database"]["password"]
-DB_NAME = config["database"]["dbname"]
-DB_HOST = config["database"]["host"]
-DB_PORT = config["database"]["port"]
-
-
-def connect_to_db():
-    # 使用本地資料庫連接
-    LOCAL_DB_HOST = 'localhost'
-    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{LOCAL_DB_HOST}:{DB_PORT}/{DB_NAME}"
-    try:
-        engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={
-                               'connect_timeout': 10})
-        return engine
-    except psycopg2.OperationalError as e:
-        print("❌ 無法連接到 PostgreSQL，請檢查連線設定")
-        print(f"OperationalError: {e}")
-        return None
-    except Exception as e:
-        print("❌ 無法連接到 PostgreSQL，請檢查連線設定")
-        print(str(e))
-        return None
-
-
 def save_videos_to_postgresql(videos, db_config, table_name):
     """
     將影片資料儲存到 PostgreSQL 資料庫中。
@@ -202,32 +149,6 @@ def save_videos_to_postgresql(videos, db_config, table_name):
     conn.close()
 
 
-def test_api(url, is_playlist=True, cookies_path=None):
-    """
-    測試 API 是否能抓取完整的資料。
-
-    Args:
-        url: 播放清單或頻道的 URL
-        is_playlist: 是否為播放清單的 URL
-        cookies_path: cookies 文件的路徑
-
-    Returns:
-        bool: 如果資料完整則返回 True，否則返回 False
-    """
-    videos = get_video_details_from_url(url, is_playlist, cookies_path)
-    if not videos:
-        print("No videos found.")
-        return False
-
-    for video in videos:
-        if not all([video['video_id'], video['title'], video['href']]):
-            print(f"Incomplete data for video: {video}")
-            return False
-
-    print("API test passed. All videos have complete data.")
-    return True
-
-
 def main(config):
     url = config['url']
     output_path = config['output_path']
@@ -249,11 +170,6 @@ def main(config):
 
     # 保存影片資料到 PostgreSQL
     save_videos_to_postgresql(videos, db_config, table_name)
-
-
-def load_db_config(yaml_path):
-    with open(yaml_path, 'r') as file:
-        return yaml.safe_load(file)
 
 
 if __name__ == "__main__":
@@ -295,8 +211,8 @@ if __name__ == "__main__":
         },
         'ebcmoneyshow': {
             'url': 'https://www.youtube.com/@EBCmoneyshow',
-            'output_path': './Subtitles/ebcmoneyshow',
-            'table_name': 'ebcmoneyshow_channel',
+            'output_path': './Subtitles/eBcmoneyshow',
+            'table_name': 'eBcmoneyshow_channel',
             'is_playlist': False,
             'cookies_path': './cookies.txt'
         },
@@ -309,8 +225,13 @@ if __name__ == "__main__":
         }
     }
 
-    db_config_path = 'db_config.yaml'  # Path to the YAML file
-    db_config = load_db_config(db_config_path)
+    db_config = {
+        'host': 'ytfinance.duckdns.org',
+        'port': 18174,
+        'dbname': 'postgres',
+        'user': 'tvbs',
+        'password': 'tvbs123'
+    }
 
     for channel_name, config in channels.items():
         config['db_config'] = db_config
